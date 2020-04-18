@@ -38,6 +38,29 @@ class App extends Component {
           haveUsersLocation: true,
           zoom: 13,
         });
+      },
+      () => {
+        console.log(
+          "Could not get the location from browser..."
+        );
+        fetch(
+          "http://api.ipstack.com/check?access_key=ef871a574011ccdce523555ec16042d5"
+        )
+          .then((res) => res.json())
+          .then((location) => {
+            console.log(location);
+            
+            this.setState({
+              location: {
+                lat:
+                  location.latitude,
+                lng:
+                  location.longitude,
+              },
+              haveUsersLocation: true,
+              zoom: 13,
+            });
+          });
       }
     );
   }
