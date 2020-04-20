@@ -1,28 +1,54 @@
 import React, {Component} from "react";
+import Joi from "joi";
 import "./App.css";
 import L from "leaflet";
 import {
-  Map,
-  TileLayer,
-  Marker,
-  Popup,
-} from "react-leaflet";
+  Card,
+  Button,
+  CardTitle,
+  CardText,
+  Form,
+  FormGroup,
+  Label,
+  Input
+} from "reactstrap";
+import {Map, TileLayer, Marker, Popup} from "react-leaflet";
 
 var icon = L.icon({
-  iconUrl:
-    "https://unpkg.com/leaflet@1.6.0/dist/images/marker-icon.png",
+  iconUrl: "https://unpkg.com/leaflet@1.6.0/dist/images/marker-icon.png",
   iconSize: [25, 41],
   iconAnchor: [22, 94],
-  popupAnchor: [0, -41],
+  popupAnchor: [0, -41]
 });
+
+const schema = Joi.object().keys({
+  name: Joi.string()
+    .min(1)
+    .max(500)
+    .required(),
+  message: Joi.string()
+    .min(1)
+    .max(500)
+    .required()
+});
+
+const API_URL =
+  window.location.hostname === "localhost"
+    ? "http://localhost:5000/api/v1/messages"
+    : "production-url";
+
 class App extends Component {
   state = {
     location: {
       lat: 51.505,
-      lng: -0.09,
+      lng: -0.09
     },
     haveUsersLocation: false,
     zoom: 2,
+    userMessage: {
+      name: '',
+      message: ''
+    },
   };
 
   componentDidMount() {
@@ -30,70 +56,130 @@ class App extends Component {
       (position) => {
         this.setState({
           location: {
-            lat:
-              position.coords.latitude,
-            lng:
-              position.coords.longitude,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
           },
           haveUsersLocation: true,
           zoom: 13,
+          userMessage: {
+            name: "",
+            message: ""
+          }
         });
       },
       () => {
-        console.log(
-          "Could not get the location from browser..."
-        );
+        console.log("Could not get the location from browser...");
         fetch(
           "http://api.ipstack.com/check?access_key=ef871a574011ccdce523555ec16042d5"
         )
           .then((res) => res.json())
           .then((location) => {
             console.log(location);
-            
+
             this.setState({
               location: {
-                lat:
-                  location.latitude,
-                lng:
-                  location.longitude,
+                lat: location.latitude,
+                lng: location.longitude
               },
               haveUsersLocation: true,
-              zoom: 13,
+              zoom: 13
             });
           });
       }
     );
   }
 
+  formIsValid = () => {
+    const userMessage = {
+      name: this.state.userMessage.name,
+      message: this.state.userMessage.message
+    };
+    const result = Joi.validate(userMessage, schema);
+    return result.error ? false : true;
+  };
+
+  formSubmitted = (event) => {
+    event.preventDefault();
+    console.log(this.state.userMessage);
+
+    if (this.formIsValid()) {
+      fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          ...this.state.userMessage,
+          latitude: this.state.location.lat,
+          longitude: this.state.location.lng
+        })
+      })
+        .then((res) => res.json())
+        .then((mess) => {
+          console.log(mess);
+        });
+    }
+  };
+
+  valueChanged = (event) => {
+    const {name, value} = event.target;
+    this.setState((prevState) => ({
+      userMessage: {
+        ...prevState.userMessage,
+        [name]: value
+      }
+    }));
+  };
+
   render() {
-    const position = [
-      this.state.location.lat,
-      this.state.location.lng,
-    ];
+    const position = [this.state.location.lat, this.state.location.lng];
     return (
-      <Map
-        className="map"
-        center={position}
-        zoom={this.state.zoom}>
-        <TileLayer
-          attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        {this.state
-          .haveUsersLocation ? (
-          <Marker
-            icon={icon}
-            position={position}>
-            <Popup>
-              A pretty CSS3 popup.{" "}
-              <br /> Easily
-              customizable.
-            </Popup>
-          </Marker>
-        ) : (
-          ""
-        )}
-      </Map>
+      <div>
+        <Map className="map" center={position} zoom={this.state.zoom}>
+          <TileLayer
+            attribution='&amp;copy <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {this.state.haveUsersLocation ? (
+            <Marker icon={icon} position={position}>
+              <Popup>
+                A pretty CSS3 popup. <br /> Easily customizable.
+              </Popup>
+            </Marker>
+          ) : (
+            ""
+          )}
+        </Map>
+        <Card body className="message-form">
+          <CardTitle>Welcome to Guestmap!</CardTitle>
+          <CardText>Leave a message with your location</CardText>
+          <Form onSubmit={this.formSubmitted}>
+            <FormGroup>
+              <Label for="Name">Name</Label>
+              <Input
+                onChange={this.valueChanged}
+                type="text"
+                name="name"
+                id="name"
+                placeholder="Your name...."
+              />
+            </FormGroup>
+            <FormGroup>
+              <Label for="Message">Message</Label>
+              <Input
+                onChange={this.valueChanged}
+                type="text"
+                name="message"
+                id="message"
+                placeholder="Your message...."
+              />
+            </FormGroup>
+            <Button disabled={!this.formIsValid()} color="info">
+              Submit
+            </Button>
+          </Form>
+        </Card>
+      </div>
     );
   }
 }
