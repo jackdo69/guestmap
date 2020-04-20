@@ -13,6 +13,8 @@ import {
   Input
 } from "reactstrap";
 import {Map, TileLayer, Marker, Popup} from "react-leaflet";
+import Loader from "react-loader-spinner";
+import "react-loader-spinner/dist/loader/css/react-spinner-loader.css";
 
 var icon = L.icon({
   iconUrl: "https://unpkg.com/leaflet@1.6.0/dist/images/marker-icon.png",
@@ -46,9 +48,11 @@ class App extends Component {
     haveUsersLocation: false,
     zoom: 2,
     userMessage: {
-      name: '',
-      message: ''
+      name: "",
+      message: ""
     },
+    sendingMessage: false,
+    sentMessage: false
   };
 
   componentDidMount() {
@@ -103,6 +107,9 @@ class App extends Component {
     console.log(this.state.userMessage);
 
     if (this.formIsValid()) {
+      this.setState({
+        sendingMessage: true
+      });
       fetch(API_URL, {
         method: "POST",
         headers: {
@@ -117,6 +124,12 @@ class App extends Component {
         .then((res) => res.json())
         .then((mess) => {
           console.log(mess);
+          setTimeout(() => {
+            this.setState({
+              sendingMessage: false,
+              sentMessage: true
+            });
+          }, 1000);
         });
     }
   };
@@ -153,31 +166,43 @@ class App extends Component {
         <Card body className="message-form">
           <CardTitle>Welcome to Guestmap!</CardTitle>
           <CardText>Leave a message with your location</CardText>
-          <Form onSubmit={this.formSubmitted}>
-            <FormGroup>
-              <Label for="Name">Name</Label>
-              <Input
-                onChange={this.valueChanged}
-                type="text"
-                name="name"
-                id="name"
-                placeholder="Your name...."
-              />
-            </FormGroup>
-            <FormGroup>
-              <Label for="Message">Message</Label>
-              <Input
-                onChange={this.valueChanged}
-                type="text"
-                name="message"
-                id="message"
-                placeholder="Your message...."
-              />
-            </FormGroup>
-            <Button disabled={!this.formIsValid()} color="info">
-              Submit
-            </Button>
-          </Form>
+          {!this.state.sendingMessage && !this.state.sentMessage ? (
+            <Form onSubmit={this.formSubmitted}>
+              <FormGroup>
+                <Label for="Name">Name</Label>
+                <Input
+                  onChange={this.valueChanged}
+                  type="text"
+                  name="name"
+                  id="name"
+                  placeholder="Your name...."
+                />
+              </FormGroup>
+              <FormGroup>
+                <Label for="Message">Message</Label>
+                <Input
+                  onChange={this.valueChanged}
+                  type="text"
+                  name="message"
+                  id="message"
+                  placeholder="Your message...."
+                />
+              </FormGroup>
+              <Button disabled={!this.formIsValid()} color="info">
+                Submit
+              </Button>
+            </Form>
+          ) : this.state.sendingMessage ? (
+            <Loader
+              className="mx-auto"
+              type="BallTriangle"
+              color="#2d7cb1"
+              height={80}
+              width={80}
+            />
+          ) : (
+            <CardTitle>Thanks for submitting a message!</CardTitle>
+          )}
         </Card>
       </div>
     );
