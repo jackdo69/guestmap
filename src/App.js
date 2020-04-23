@@ -52,10 +52,19 @@ class App extends Component {
       message: ""
     },
     sendingMessage: false,
-    sentMessage: false
+    sentMessage: false,
+    messages: []
   };
 
   componentDidMount() {
+    fetch(API_URL)
+      .then((res) => res.json())
+      .then((messages) => {
+        this.setState({
+          messages
+        });
+      });
+
     navigator.geolocation.getCurrentPosition(
       (position) => {
         this.setState({
@@ -154,19 +163,23 @@ class App extends Component {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           {this.state.haveUsersLocation ? (
-            <Marker icon={icon} position={position}>
-              <Popup>
-                A pretty CSS3 popup. <br /> Easily customizable.
-              </Popup>
-            </Marker>
+            <Marker icon={icon} position={position}></Marker>
           ) : (
             ""
           )}
+          {this.state.messages.map((mess) => (
+            <Marker icon={icon} position={[mess.latitude, mess.longitude]}>
+              <Popup>
+                <em>{mess.name}</em>:{mess.message}
+              </Popup>
+            </Marker>
+          ))}
         </Map>
         <Card body className="message-form">
           <CardTitle>Welcome to Guestmap!</CardTitle>
           <CardText>Leave a message with your location</CardText>
-          {!this.state.sendingMessage && !this.state.sentMessage ? (
+          {(!this.state.sendingMessage && !this.state.sentMessage) ||
+          !this.state.haveUsersLocation ? (
             <Form onSubmit={this.formSubmitted}>
               <FormGroup>
                 <Label for="Name">Name</Label>
@@ -192,7 +205,7 @@ class App extends Component {
                 Submit
               </Button>
             </Form>
-          ) : this.state.sendingMessage ? (
+          ) : this.state.sendingMessage || !this.state.haveUsersLocation ? (
             <Loader
               className="mx-auto"
               type="BallTriangle"
